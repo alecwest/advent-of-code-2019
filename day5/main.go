@@ -55,8 +55,8 @@ func IntCode(input string) int {
 	for i := range instructions {
 		instructions[i], _ = strconv.Atoi(memory[i])
 	}
-	instructions = processInstructions(instructions)
-	return instructions[0]
+	result := processInstructions(instructions)
+	return result
 }
 
 func getOpCode(instruction int) int {
@@ -68,31 +68,59 @@ func getMode(instruction, paramNumber int) int {
 	return instruction / int(math.Pow(10, float64(1+paramNumber))) % 10
 }
 
-func processInstructions(instructions []int) []int {
-	var numParameters int
-	for i := 0; i < len(instructions); i += numParameters + 1 {
+func processInstructions(instructions []int) int {
+	var output int = math.MinInt64
+	for i := 0; i < len(instructions); {
 		code := getOpCode(instructions[i])
 		switch code {
 		case ADD:
-			numParameters = 3
 			instructions = add(instructions, i)
+			i += 4
 		case MULTIPLY:
-			numParameters = 3
 			instructions = multiply(instructions, i)
+			i += 4
 		case INPUT:
-			numParameters = 1
 			instructions = readInput(instructions, i)
+			i += 2
 		case OUTPUT:
-			numParameters = 1
-			instructions = printOutput(instructions, i)
+			instructions, output = printOutput(instructions, i)
+			i += 2
+		case JUMPIFTRUE:
+			if getParam(instructions, i, 1) != 0 {
+				i = getParam(instructions, i, 2)
+			} else {
+				i += 3
+			}
+		case JUMPIFFALSE:
+			if getParam(instructions, i, 1) == 0 {
+				i = getParam(instructions, i, 2)
+			} else {
+				i += 3
+			}
+		case LESSTHAN:
+			var result int
+			if getParam(instructions, i, 1) < getParam(instructions, i, 2) {
+				result = 1
+			}
+			instructions = setParam(instructions, i, 3, result)
+			i += 4
+		case EQUALS:
+			var result int
+			if getParam(instructions, i, 1) == getParam(instructions, i, 2) {
+				result = 1
+			}
+			instructions = setParam(instructions, i, 3, result)
+			i += 4
 		case EXIT:
-			numParameters = 1
-			return instructions
+			i = len(instructions)
 		default:
 			fmt.Printf("unexpected code %d\n", code)
 		}
 	}
-	return instructions
+	if output > math.MinInt64 {
+		return output
+	}
+	return instructions[0]
 }
 
 func add(instructions []int, opcodeIndex int) []int {
@@ -108,13 +136,14 @@ func multiply(instructions []int, opcodeIndex int) []int {
 }
 
 func readInput(instructions []int, opcodeIndex int) []int {
-	input := 1
+	input := 5
 	return setParam(instructions, opcodeIndex, 1, input)
 }
 
-func printOutput(instructions []int, opcodeIndex int) []int {
-	fmt.Printf("%d\n", getParam(instructions, opcodeIndex, 1))
-	return instructions
+func printOutput(instructions []int, opcodeIndex int) ([]int, int) {
+	output := getParam(instructions, opcodeIndex, 1)
+	fmt.Printf("%d\n", output)
+	return instructions, output
 }
 
 func getParam(instructions []int, opcodeIndex, paramNumber int) int {
