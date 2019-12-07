@@ -6,6 +6,14 @@ import (
 	"strconv"
 )
 
+// ReadIntInput reads input as a single integer
+func ReadIntInput() int {
+	scanner := bufio.NewScanner(os.Stdin)
+	scanner.Scan()
+	val, _ := strconv.Atoi(scanner.Text())
+	return val
+}
+
 // ReadIntArrayInput reads multiple lines of integers
 func ReadIntArrayInput() []int {
 	scanner := bufio.NewScanner(os.Stdin)
