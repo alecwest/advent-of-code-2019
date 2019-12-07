@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"strconv"
 	"strings"
 
@@ -15,14 +16,24 @@ func NumPossiblePasswords(input string) int {
 
 	numPasswords := 0
 	for i := start; i <= end; i++ {
-		currPassword := strconv.Itoa(i)
+		currPassword := fmt.Sprintf("%06d", i)
 
 		// Initialize criteria
 		adjacentSame := false
 		leftRightDecrease := false
 		for j := 1; j < 6; j++ {
 			if currPassword[j-1] == currPassword[j] {
-				adjacentSame = true
+				if j == 5 || (j < 5 && currPassword[j+1] != currPassword[j]) {
+					adjacentSame = true
+				} else {
+					for {
+						if j < 5 && currPassword[j+1] == currPassword[j] {
+							j++
+						} else {
+							break
+						}
+					}
+				}
 			}
 			if strings.Compare(string(currPassword[j-1]), string(currPassword[j])) > 0 {
 				leftRightDecrease = true
