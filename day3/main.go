@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"strings"
 
-	"../advent"
+	"github.com/alecwest/advent-of-code-2019/advent"
 )
 
 const (
@@ -32,6 +32,7 @@ type line struct {
 	point1    point
 	point2    point
 	direction string
+	length    int
 }
 
 type path struct {
@@ -78,6 +79,7 @@ func parsePath(input []string) path {
 		default:
 			fmt.Fprintf(os.Stderr, "invalid direction given: %s", wire[i].direction)
 		}
+		wire[i].length = distance
 	}
 	return path{wire}
 }
@@ -96,8 +98,16 @@ func linesIntersect(hLine, vLine line) bool {
 	return advent.NumberIsBetween(hLine.point1.x, hLine.point2.x, potentialIntersection.x) && advent.NumberIsBetween(vLine.point1.y, vLine.point2.y, potentialIntersection.y)
 }
 
+func getIntersection(hLine, vLine line) *point {
+	potentialIntersection := point{vLine.point1.x, hLine.point1.y}
+	if advent.NumberIsBetween(hLine.point1.x, hLine.point2.x, potentialIntersection.x) && advent.NumberIsBetween(vLine.point1.y, vLine.point2.y, potentialIntersection.y) {
+		return &potentialIntersection
+	}
+	return nil
+}
+
 func comparePointDistance(p1, p2 point) int {
-	return (advent.Abs(p1.x) + advent.Abs(p1.y)) - (advent.Abs(p2.x) + advent.Abs(p2.y))
+	return advent.Abs((advent.Abs(p1.x) + advent.Abs(p1.y)) - (advent.Abs(p2.x) + advent.Abs(p2.y)))
 }
 
 func isVertical(l line) bool {
@@ -114,11 +124,14 @@ func BestIntersection(strPath1, strPath2 string) int {
 	input2 := strings.Split(strPath2, ",")
 	path1 := parsePath(input1)
 	path2 := parsePath(input2)
-	var bestIntersection point
+	var shortestDistance int
 
+	lineDistance1 := 0
 	for _, line1 := range path1.lines {
+		lineDistance2 := 0
 		for _, line2 := range path2.lines {
 			if !linesArePerpendicular(line1, line2) {
+				lineDistance2 += line2.length
 				continue
 			}
 			var vLine line
@@ -131,15 +144,21 @@ func BestIntersection(strPath1, strPath2 string) int {
 				hLine = line1
 			}
 
-			if linesIntersect(hLine, vLine) {
-				intersection := point{vLine.point1.x, hLine.point1.y}
-				if isCentralPort(bestIntersection) || comparePointDistance(intersection, bestIntersection) < 0 {
-					bestIntersection = intersection
+			intersection := getIntersection(hLine, vLine)
+			if intersection != nil {
+				// Get length of lines taken to get to intersection
+				partialLineDistance1 := comparePointDistance(hLine.point1, *intersection)
+				partialLineDistance2 := comparePointDistance(vLine.point1, *intersection)
+				intersectDistance := lineDistance1 + lineDistance2 + partialLineDistance1 + partialLineDistance2
+				if shortestDistance == 0 || intersectDistance < shortestDistance {
+					shortestDistance = intersectDistance
 				}
 			}
+			lineDistance2 += line2.length
 		}
+		lineDistance1 += line1.length
 	}
-	return bestIntersection.x + bestIntersection.y
+	return shortestDistance
 }
 
 func main() {
