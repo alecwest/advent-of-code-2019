@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"math"
 	"strings"
 
 	"github.com/alecwest/advent-of-code-2019/advent"
@@ -47,6 +48,26 @@ func breadthFirstSearch(nodes []node, nodeIndex int) int {
 	return nodesVisited
 }
 
+// return depth of node
+func depthFirstSearch(nodes []node, startNode, target string) int {
+	return dfs(nodes, target, getNodeIndex(nodes, startNode), 0)
+}
+
+// return depth of node
+func dfs(nodes []node, target string, currNodeIndex, depth int) int {
+	currNode := nodes[currNodeIndex]
+	if currNode.name == target {
+		return depth
+	}
+	for _, child := range nodes[currNodeIndex].children {
+		result := dfs(nodes, target, getNodeIndex(nodes, child), depth+1)
+		if result != -1 {
+			return result
+		}
+	}
+	return -1
+}
+
 func getNodeIndex(nodes []node, target string) int {
 	nodeIndex := -1
 	for i, n := range nodes {
@@ -66,8 +87,24 @@ func totalOrbits(input []string) int {
 	return sum
 }
 
+func orbitalTransfers(input []string, nodeA, nodeB string) int {
+	graph := buildGraph(input)
+	minimumTransfer := math.MaxInt64
+
+	for _, node := range graph {
+		a := depthFirstSearch(graph, node.name, nodeA)
+		b := depthFirstSearch(graph, node.name, nodeB)
+		if a > 0 && b > 0 && a+b < minimumTransfer {
+			minimumTransfer = a + b
+		}
+	}
+
+	return minimumTransfer - 2
+}
+
 func main() {
 	input := advent.ReadStringArrayInput()
 
-	fmt.Printf("%d\n", totalOrbits(input))
+	// fmt.Printf("%d\n", totalOrbits(input))
+	fmt.Printf("%d\n", orbitalTransfers(input, "YOU", "SAN"))
 }

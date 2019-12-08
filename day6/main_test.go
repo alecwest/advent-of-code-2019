@@ -67,6 +67,34 @@ func TestBreadthFirstSearch(t *testing.T) {
 	}
 }
 
+func TestDepthFirstSearch(t *testing.T) {
+	tables := []struct {
+		nodes    []node
+		target   string
+		expected int
+	}{
+		{nodes, "COM", 0},
+		{nodes, "B", 1},
+		{nodes, "C", 2},
+		{nodes, "D", 3},
+		{nodes, "E", 4},
+		{nodes, "F", 5},
+		{nodes, "G", 2},
+		{nodes, "H", 3},
+		{nodes, "I", 4},
+		{nodes, "J", 5},
+		{nodes, "K", 6},
+		{nodes, "L", 7},
+	}
+
+	for _, table := range tables {
+		result := depthFirstSearch(table.nodes, "COM", table.target)
+		if !reflect.DeepEqual(result, table.expected) {
+			t.Errorf("breadthFirstSearch returned unexpected result for %+v: got %+v", table, result)
+		}
+	}
+}
+
 func TestTotalOrbits(t *testing.T) {
 	tables := []struct {
 		input    []string
@@ -78,6 +106,26 @@ func TestTotalOrbits(t *testing.T) {
 
 	for _, table := range tables {
 		result := totalOrbits(table.input)
+		if !reflect.DeepEqual(result, table.expected) {
+			t.Errorf("totalOrbits returned unexpected result for %+v: got %+v", table, result)
+		}
+	}
+}
+
+func TestOrbitalTransfers(t *testing.T) {
+	tables := []struct {
+		input    []string
+		nodeA    string
+		nodeB    string
+		expected int
+	}{
+		{input, "L", "H", 6},
+		{input, "L", "F", 2},
+		{[]string{"COM)B", "B)C", "C)D", "D)E", "E)F", "B)G", "G)H", "D)I", "E)J", "J)K", "K)L", "K)YOU", "I)SAN"}, "YOU", "SAN", 4},
+	}
+
+	for _, table := range tables {
+		result := orbitalTransfers(table.input, table.nodeA, table.nodeB)
 		if !reflect.DeepEqual(result, table.expected) {
 			t.Errorf("totalOrbits returned unexpected result for %+v: got %+v", table, result)
 		}
