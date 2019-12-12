@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"math"
-	"os"
 	"strconv"
 	"strings"
 
@@ -49,17 +48,18 @@ const (
 	IMMEDIATE = 1
 )
 
-var inputQueue []int
+// IntCode processes the instructions and returns the result and last opcode
+func IntCode(instructions []int, inputChan, outputChan, result chan int) {
+	processInstructions(instructions, inputChan, outputChan, result)
+}
 
-// IntCode processes the instructions
-func IntCode(input string) int {
+func parseInstructions(input string) []int {
 	memory := strings.Split(input, ",")
 	instructions := make([]int, len(memory))
 	for i := range instructions {
 		instructions[i], _ = strconv.Atoi(memory[i])
 	}
-	result := processInstructions(instructions)
-	return result
+	return instructions
 }
 
 func getOpCode(instruction int) int {
@@ -71,10 +71,11 @@ func getMode(instruction, paramNumber int) int {
 	return instruction / int(math.Pow(10, float64(1+paramNumber))) % 10
 }
 
-func processInstructions(instructions []int) int {
+func processInstructions(instructions []int, inputChan, outputChan, result chan int) {
 	var output int = math.MinInt64
+	var code int
 	for i := 0; i < len(instructions); {
-		code := getOpCode(instructions[i])
+		code = getOpCode(instructions[i])
 		switch code {
 		case ADD:
 			instructions = add(instructions, i)
@@ -83,10 +84,10 @@ func processInstructions(instructions []int) int {
 			instructions = multiply(instructions, i)
 			i += 4
 		case INPUT:
-			instructions = readInput(instructions, i)
+			instructions = readInput(instructions, i, inputChan)
 			i += 2
 		case OUTPUT:
-			instructions, output = printOutput(instructions, i)
+			instructions, output = printOutput(instructions, i, outputChan)
 			i += 2
 		case JUMPIFTRUE:
 			if getParam(instructions, i, 1) != 0 {
@@ -120,10 +121,7 @@ func processInstructions(instructions []int) int {
 			fmt.Printf("unexpected code %d\n", code)
 		}
 	}
-	if output > math.MinInt64 {
-		return output
-	}
-	return instructions[0]
+	result <- output
 }
 
 func add(instructions []int, opcodeIndex int) []int {
@@ -138,15 +136,14 @@ func multiply(instructions []int, opcodeIndex int) []int {
 	return setParam(instructions, opcodeIndex, 3, val1*val2)
 }
 
-func readInput(instructions []int, opcodeIndex int) []int {
-	input := inputQueue[0]
-	inputQueue = inputQueue[1:]
+func readInput(instructions []int, opcodeIndex int, inputChan chan int) []int {
+	input := <-inputChan
 	return setParam(instructions, opcodeIndex, 1, input)
 }
 
-func printOutput(instructions []int, opcodeIndex int) ([]int, int) {
+func printOutput(instructions []int, opcodeIndex int, outputChan chan int) ([]int, int) {
 	output := getParam(instructions, opcodeIndex, 1)
-	fmt.Printf("output: %d\n", output)
+	outputChan <- output
 	return instructions, output
 }
 
@@ -186,26 +183,43 @@ func injectNounAndVerb(instructions string, noun int, verb int) string {
 	return strings.Join(codes, ",")
 }
 
-func maxThrusters(instructions string, phaseSetting, ampOutput int) int {
-	inputQueue = append(inputQueue, phaseSetting, ampOutput)
-	return IntCode(instructions)
+func thrusterChain(instructions []int, thrusterPermutation []int) int {
+	channels := make([]chan int, len(thrusterPermutation))
+	resultChannels := make([]chan int, len(thrusterPermutation))
+	for i := range channels {
+		channels[i] = make(chan int, 2)
+		resultChannels[i] = make(chan int, 1)
+	}
+	thrusterInstructions := make([][]int, len(thrusterPermutation))
+	for i := range thrusterInstructions {
+		thrusterInstructions[i] = make([]int, len(instructions)+1)
+		copy(thrusterInstructions[i], instructions)
+		thrusterInstructions[i][len(instructions)] = i
+	}
+	for i, channel := range channels {
+		channel <- thrusterPermutation[i]
+	}
+	channels[0] <- 0
+
+	for i := 0; i < len(channels); i++ {
+		go IntCode(thrusterInstructions[i], channels[i], channels[(i+1)%len(channels)], resultChannels[i])
+	}
+	return <-resultChannels[len(thrusterPermutation)-1]
 }
 
-func writeToStdin(str int) {
-	fmt.Fprintf(os.Stdin, "%d\n", str)
-}
-
-func main() {
-	instructions := advent.ReadStringInput()
+func maxThrusterSignal(input string) int {
+	instructions := parseInstructions(input)
 	maxSignal := math.MinInt64
-	for _, perm := range advent.Permutations([]int{0, 1, 2, 3, 4}) {
-		var output int
-		for i := 0; i < 5; i++ {
-			output = maxThrusters(instructions, perm[i], output)
-		}
+	var output int
+	for _, perm := range advent.Permutations([]int{5, 6, 7, 8, 9}) {
+		output = thrusterChain(instructions, perm)
 		if output > maxSignal {
 			maxSignal = output
 		}
 	}
-	println(maxSignal)
+	return maxSignal
+}
+
+func main() {
+	println(maxThrusterSignal(advent.ReadStringInput()))
 }
