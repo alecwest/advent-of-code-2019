@@ -8,6 +8,17 @@ import (
 	"github.com/alecwest/advent-of-code-2019/advent"
 )
 
+const (
+	// BLACK color
+	BLACK = 0
+
+	// WHITE color
+	WHITE = 1
+
+	// TRANSPARENT (no) color
+	TRANSPARENT = 2
+)
+
 // Image is the full image
 type Image struct {
 	layers []Layer
@@ -38,6 +49,36 @@ func parseImage(input string, length, width int) Image {
 	return Image{layers, length, width}
 }
 
+func printImage(image Image) {
+	for i := 0; i < image.length; i++ {
+		for j := 0; j < image.width; j++ {
+			pixel := topPixel(image, i, j)
+			if pixel == 1 {
+				fmt.Printf("%d ", pixel)
+			} else {
+				fmt.Printf("  ")
+			}
+		}
+		fmt.Printf("\n")
+	}
+}
+
+func topPixel(image Image, row, col int) int {
+	for _, layer := range image.layers {
+		currPixel := layer.pixels[row*image.width+col]
+		if currPixel != TRANSPARENT {
+			return currPixel
+		}
+	}
+	return image.layers[len(image.layers)].pixels[row*image.width+col]
+}
+
+func main() {
+	input := advent.ReadStringInput()
+	image := parseImage(input, 6, 25)
+	printImage(image)
+}
+
 func pixelCount(layer Layer) map[int]int {
 	count := make(map[int]int)
 	for _, pixel := range layer.pixels {
@@ -59,12 +100,4 @@ func layerWithLeastZeros(image Image) (Layer, map[int]int) {
 		}
 	}
 	return bestLayer, bestMap
-}
-
-func main() {
-	input := advent.ReadStringInput()
-	image := parseImage(input, 6, 25)
-	leastZeros, numDigits := layerWithLeastZeros(image)
-	fmt.Printf("%+v\n", leastZeros)
-	fmt.Printf("%d\n", numDigits[1]*numDigits[2])
 }
